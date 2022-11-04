@@ -1,0 +1,17 @@
+{
+  "name": "aws_ec2_region_switcher",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "aws-cli-js": "^2.2.3",
+    "express": "^4.18.2",
+    "pug": "^3.0.2"
+  }
+}

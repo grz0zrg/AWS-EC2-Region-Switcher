@@ -1,0 +1,45 @@
+html
+  head
+    title VPN Region Switch
+    style
+      include style.css
+    if currentInstance.state == 'waiting'
+      script
+        include refresh.js
+    else
+      script
+        include page.js
+  body
+    div(class='container')
+      if error
+        div(class='error')
+          h2 #{error}
+        div(class='return')
+          a(href='vpn') try again
+      else
+        if currentInstance.state != 'waiting'
+          div(class='toggle')
+            h1 VPN Region:
+            div(class='list')
+              each val, key in regions
+                div(class='list-item')
+                  if currentInstance.code == key
+                    img(src='vpn/public/flags/' + key + '.png' title=val.title width='40')
+                    div(class="dot")
+                  else
+                    a(href='vpn/' + key onclick="showOverlay()")
+                      img(class='greyed' src='vpn/public/flags/' + key + '.png' title=val.title width='40')
+        div(class='state')
+          if currentInstance.instance
+            p VPN State:
+              span(class='up') #{' '} UP (region: #{currentInstance.code}, ip: #{currentInstance.instance.PublicIpAddress})
+            p Just click on a flag to switch region!
+          else
+            if currentInstance.state == 'waiting'
+              p VPN State:
+                span(class='waiting') #{' '} GOING UP (region: #{currentInstance.code})
+              p Please wait... (page will refresh every 5 seconds)
+            else
+              p VPN State:
+                span(class='down') #{' '} DOWN
+              p Just click on a flag to bring it up!
