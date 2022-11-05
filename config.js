@@ -1,7 +1,12 @@
 module.exports = {
   server: {
     port: 9000,
-    stateCheckIntervalMs: 5000
+    stateCheckIntervalMs: 5000,
+    // wether to use ping (accurate with a domain name) or AWS InstanceStatus to determine wether the instance is ready
+    usePing: false,
+    // a domain name attached to instances (used with usePing: true) to determine wether the instance is ready to be accessed by the domain name
+    // this is likely more accurate than AWS InstanceStatus...
+    instancesDomainName: ''
   },
   // data that is passed to Pug template
   pug: {

@@ -15,7 +15,7 @@ html
         div(class='error')
           h2 #{error}
         div(class='return')
-          a(href='vpn') try again
+          a(href='/') try again
       else
         if currentInstance.state != 'waiting'
           div(class='toggle')
@@ -24,11 +24,11 @@ html
               each val, key in regions
                 div(class='list-item')
                   if currentInstance.code == key
-                    img(src='vpn/public/flags/' + key + '.png' title=val.title width='40')
+                    img(src='public/flags/' + key + '.png' title=val.title width='40')
                     div(class="dot")
                   else
-                    a(href='vpn/' + key onclick="showOverlay()")
-                      img(class='greyed' src='vpn/public/flags/' + key + '.png' title=val.title width='40')
+                    a(href='' + key onclick="showOverlay()")
+                      img(class='greyed' src='public/flags/' + key + '.png' title=val.title width='40')
         div(class='state')
           if currentInstance.instance
             p VPN State:

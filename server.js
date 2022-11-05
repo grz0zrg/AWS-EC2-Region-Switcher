@@ -1,6 +1,7 @@
 const path = require('path')
 const awsCli = require('aws-cli-js')
 const express = require('express')
+const ping = require('ping')
 const app = express()
 const router = express.Router({strict: true})
 
@@ -27,7 +28,8 @@ let currentInstance = {
   code: '',
   instance: '',
   state: '',
-  id: ''
+  id: '',
+  ip: ''
 }
 
 const getCurrentInstance = () => {
@@ -43,7 +45,8 @@ const getCurrentInstance = () => {
                   instance: instance,
                   code: region.code,
                   state: '',
-                  id: instance.InstanceId
+                  id: instance.InstanceId,
+                  ip: ''
                 })
               })
             })
@@ -65,7 +68,8 @@ const getCurrentInstance = () => {
           code: '',
           instance: '',
           state: '',
-          id: ''
+          id: '',
+          ip: ''
         }
       }
 
@@ -117,7 +121,7 @@ const terminateInstance = (instanceId, region) => {
 }
 
 const describeInstance = (instanceId, region) => {
-  return aws.command(`ec2 describe-instances --instance-ids ${instanceId} --region ${region}`)
+  return aws.command(`ec2 describe-instances --instance-ids ${instanceId} --region ${region} --filters "Name=instance-state-name,Values=running" "Name=tag:Name,Values=${Config.instances.nameTag}"`)
 }
 
 const describeInstanceStatus = (instanceId, region) => {
@@ -144,7 +148,8 @@ Config.instances.regions.forEach((region) => {
         code: '',
         instance: '',
         state: '',
-        id: ''
+        id: '',
+        ip: ''
       }
 
       const newInstance = await runInstance(region.launchTemplate, region.name)
@@ -154,15 +159,16 @@ Config.instances.regions.forEach((region) => {
         code: region.code,
         instance: '',
         state: 'waiting',
-        id: instanceId
+        id: instanceId,
+        ip: ''
       }
 
       await setCloudWatchAlarm(instanceId, region.name)
 
-      res.redirect('/vpn')
+      res.redirect('/')
     } catch (e) {
       console.log(e)
-      res.redirect('/vpn?error=true')
+      res.redirect('/?error=true')
     }
   });
 })
@@ -195,13 +201,40 @@ const checkInstanceState = async () => {
     const region = getRegionFromCode(currentInstance.code)
     
     try {
-      const instance = await describeInstanceStatus(currentInstance.id, region.name)
-      
-      if (instance.object.InstanceStatuses.length) {
-        const instanceObject = instance.object.InstanceStatuses[0]
-        if (instanceObject.InstanceStatus.Status === 'ok') {
-          currentInstance.instance = instanceObject
-          currentInstance.state = ''
+      if (Config.server.usePing) {
+        // ping newly created instance to check instance is ready
+        if (!currentInstance.ip) {
+          // determine instance IP address first
+          const instance = await describeInstance(currentInstance.id, region.name)
+          if (instance.object && instance.object.Reservations.length && instance.object.Reservations[0].Instances.length) {
+            const instanceObject = instance.object.Reservations[0].Instances[0]
+            currentInstance.ip = instanceObject.PublicIpAddress
+          }
+        }
+
+        if (currentInstance.ip) {
+          const target = Config.server.instancesDomainName ? Config.server.instancesDomainName : currentInstance.ip
+          const pingResult = await ping.promise.probe(target, { timeout: 5, deadline: 5 })
+          if (pingResult.alive && pingResult.numeric_host === currentInstance.ip) {
+            const instance = await describeInstance(currentInstance.id, region.name)
+            if (instance.object && instance.object.Reservations.length && instance.object.Reservations[0].Instances.length) {
+              const instanceObject = instance.object.Reservations[0].Instances[0]
+
+              currentInstance.instance = instanceObject
+              currentInstance.state = ''
+            }
+          }
+        }
+      } else {
+        // use InstanceStatus property to check instance is ready
+        const instance = await describeInstanceStatus(currentInstance.id, region.name)
+        
+        if (instance.object.InstanceStatuses.length) {
+          const instanceObject = instance.object.InstanceStatuses[0]
+          if (instanceObject.InstanceStatus.Status === 'ok') {
+            currentInstance.instance = instanceObject
+            currentInstance.state = ''
+          }
         }
       }
     } catch (e) {
